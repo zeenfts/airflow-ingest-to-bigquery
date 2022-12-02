@@ -16,6 +16,7 @@ import pyarrow as pa
 import pyarrow.csv as pv
 import pyarrow.json as jsw
 import pyarrow.parquet as pq
+import pandas as pd
 
 PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "your-project-id")
 BUCKET_NAME = os.environ.get("GCP_GCS_BUCKET", "your-bucket-name")
@@ -50,10 +51,12 @@ def csv_saver(json_file: str):
     table = jsw.read_json(json_file)
     table_arr = table['data'].to_numpy()
 
-    pd_tbl = pa.RecordBatch.from_pylist(list(i for i in table_arr[0]))
+    list_tbl = list(i for i in table_arr[0])
+    # pd_tbl = pa.RecordBatch.from_pylist(list_tbl)
+    df = pd.DataFrame.from_dict(list_tbl)
+    df_tbl = pa.Table.from_pandas(df)
 
-    wr_opt = pv.WriteOptions(delimiter=',')
-    pv.write_csv(pd_tbl, json_file.replace('json', 'csv'), write_options=wr_opt)
+    pv.write_csv(df_tbl, f"{LOCAL_HOME_PATH}/{CSV_SAVED}")
 
 def format_to_parquet(src_file: str):
     """Convert CSV file to PARQUET file format"""
