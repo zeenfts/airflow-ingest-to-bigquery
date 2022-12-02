@@ -3,6 +3,8 @@ FROM apache/airflow:2.4.3
 
 ENV AIRFLOW_HOME=/opt/airflow
 
+COPY /.google .
+# COPY creds.json .
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -18,7 +20,5 @@ WORKDIR $AIRFLOW_HOME
 
 # COPY scripts scripts
 # RUN chmod +x scripts
-COPY .google .
-# COPY creds.json .
 
 USER $AIRFLOW_UID

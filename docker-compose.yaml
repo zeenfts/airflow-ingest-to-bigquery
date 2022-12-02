@@ -15,7 +15,7 @@ x-common:
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - /var/run/docker.sock:/var/run/docker.sock
-    - ~/.google/:/.google:ro
+    - <YOUR_EXACT_PATH_LOCAL_TO_THE_PROJECT>/.google/:/.google:ro
 
 x-depends-on:
   &depends-on
