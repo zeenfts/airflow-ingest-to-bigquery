@@ -10,6 +10,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # SHELL ["/bin/bash", "-o", "pipefail", "-e", "-u", "-x", "-c"]
 
+# USER root
+# RUN apt-get update && apt-get install wget
+# USER airflow
+
 WORKDIR $AIRFLOW_HOME
 
 # COPY scripts scripts

@@ -1,5 +1,7 @@
 import os
 import logging
+import requests
+import json
 
 from airflow import DAG
 from airflow.utils.dates import days_ago
@@ -26,6 +28,19 @@ CSV_SAVED = API_RESULT.replace('.json', '.csv')
 PARQUET_FILE = CSV_SAVED.replace('.csv', '.parquet')
 BIGQUERY_DATASET = os.environ.get('BIGQUERY_DATASET', 'datausa')
 
+def api_call_data(url_json: str, local_json: str):
+    """
+    Call for the api to get json file
+
+    * url_json: retrieve data as json from url
+    * local_json: local path to store the file
+    """
+    r = requests.get(url = url_json)
+
+    data = r.json()
+    with open(local_json, 'w') as outfile:
+        json.dump(data, outfile)
+
 def csv_saver(json_file: str):
     """Pass json file path url and convert to csv filetype"""
     if not json_file.endswith('.json'):
@@ -35,7 +50,7 @@ def csv_saver(json_file: str):
     table = jsw.read_json(json_file)
     table_arr = table['data'].to_numpy()
 
-    pd_tbl = pa.RecordBatch.from_pylist([i for i in table_arr[0]])
+    pd_tbl = pa.RecordBatch.from_pylist(list(i for i in table_arr[0]))
 
     wr_opt = pv.WriteOptions(delimiter=',')
     pv.write_csv(pd_tbl, json_file.replace('json', 'csv'), write_options=wr_opt)
@@ -97,15 +112,25 @@ with DAG(
     tags=['apb8'],
 ) as dag:
 
-    call_dataset_task = BashOperator(
+    # call_dataset_task = BashOperator(
+    #     task_id="call_dataset_task",
+    #     bash_command=f"wget {URL_API} -O {LOCAL_HOME_PATH}/{API_RESULT}"
+    # )
+
+    call_dataset_task = PythonOperator(
         task_id="call_dataset_task",
-        bash_command=f"wget {URL_API} -O {LOCAL_HOME_PATH}/{API_RESULT}"
+        python_callable=api_call_data,
+        op_kwargs={ 
+            "url_json": URL_API,
+            "local_json": f"{LOCAL_HOME_PATH}/{API_RESULT}"
+        }
     )
 
     save_as_csv = PythonOperator(
         task_id="save_as_csv",
         python_callable=csv_saver,
-        op_kwargs={ "json_file": f"{LOCAL_HOME_PATH}/{API_RESULT}",
+        op_kwargs={ 
+            "json_file": f"{LOCAL_HOME_PATH}/{API_RESULT}",
         }
     )
 
