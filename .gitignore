@@ -4,3 +4,4 @@ logs/
 *.csv
 *.parquet
 *.ipynb
+__pycache__

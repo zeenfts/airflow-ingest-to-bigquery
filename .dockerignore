@@ -1,3 +1,5 @@
 *.csv
 *.parquet
 *.ipynb
+__pycache__
+.git

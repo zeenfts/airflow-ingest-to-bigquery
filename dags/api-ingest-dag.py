@@ -78,3 +78,69 @@ def upload_to_gcs(project_id:str, bucket: str, object_name: str, local_file: str
 
     blob = buckt.blob(object_name)
     blob.upload_from_filename(local_file)
+
+# Airflow -------------------
+default_args = {
+    "owner": "airflow",
+    "start_date": days_ago(1),
+    "depends_on_past": False,
+    "retries": 1,
+}
+
+# NOTE: DAG declaration - using a Context Manager (an implicit way)
+with DAG(
+    dag_id="api-ingest-dag",
+    schedule_interval="@daily",
+    default_args=default_args,
+    catchup=False,
+    max_active_runs=1,
+    tags=['apb8'],
+) as dag:
+
+    call_dataset_task = BashOperator(
+        task_id="call_dataset_task",
+        bash_command=f"wget {URL_API} -O {LOCAL_HOME_PATH}/{API_RESULT}"
+    )
+
+    save_as_csv = PythonOperator(
+        task_id="save_as_csv",
+        python_callable=csv_saver,
+        op_kwargs={ "json_file": f"{LOCAL_HOME_PATH}/{API_RESULT}",
+        }
+    )
+
+    format_to_parquet_task = PythonOperator(
+        task_id="format_to_parquet_task",
+        python_callable=format_to_parquet,
+        op_kwargs={
+            "src_file": f"{LOCAL_HOME_PATH}/{CSV_SAVED}",
+        },
+    )
+
+    local_to_gcs_task = PythonOperator(
+        task_id="local_to_gcs_task",
+        python_callable=upload_to_gcs,
+        op_kwargs={
+            "project_id": PROJECT_ID,
+            "bucket": BUCKET_NAME,
+            "object_name": f"raw/{PARQUET_FILE}",
+            "local_file": f"{LOCAL_HOME_PATH}/{PARQUET_FILE}",
+        },
+    )
+
+    bigquery_external_table_task = BigQueryCreateExternalTableOperator(
+        task_id="bigquery_external_table_task",
+        table_resource={
+            "tableReference": {
+                "projectId": PROJECT_ID,
+                "datasetId": BIGQUERY_DATASET,
+                "tableId": "external_table",
+            },
+            "externalDataConfiguration": {
+                "sourceFormat": "PARQUET",
+                "sourceUris": [f"gs://{BUCKET_NAME}/raw/{PARQUET_FILE}"],
+            },
+        },
+    )
+
+    call_dataset_task >> save_as_csv >> format_to_parquet_task >> local_to_gcs_task >> bigquery_external_table_task
