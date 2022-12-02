@@ -1,3 +1,6 @@
 *.json
 venv/
 logs/
+*.csv
+*.parquet
+*.ipynb
