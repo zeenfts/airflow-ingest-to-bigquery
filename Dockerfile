@@ -18,5 +18,7 @@ WORKDIR $AIRFLOW_HOME
 
 # COPY scripts scripts
 # RUN chmod +x scripts
+COPY .google .
+# COPY creds.json .
 
 USER $AIRFLOW_UID

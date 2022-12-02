@@ -66,10 +66,9 @@ def format_to_parquet(src_file: str):
     table = pv.read_csv(src_file)
     pq.write_table(table, src_file.replace('.csv', '.parquet'))
 
-def upload_to_gcs(project_id:str, bucket: str, object_name: str, local_file: str):
+def upload_to_gcs(bucket: str, object_name: str, local_file: str):
     """
     Ref: https://cloud.google.com/storage/docs/uploading-objects#storage-upload-object-python
-    * project_id: GCS project id (existed)
     * bucket: GCS bucket name (existed)
     * object_name: target path & file-name
     * local_file: source path & file-name\n
@@ -81,16 +80,16 @@ def upload_to_gcs(project_id:str, bucket: str, object_name: str, local_file: str
     # storage.blob._DEFAULT_CHUNKSIZE = 5 * 1024 * 1024  # 5 MB
     # # End of Workaround
 
-    CREDS_PATH = f"{LOCAL_HOME_PATH}/{CREDS_FILE}"
-    AUTH_CREDS = service_account.Credentials.from_service_account_file(CREDS_PATH)
+    # CREDS_PATH = f"{LOCAL_HOME_PATH}/{CREDS_FILE}"
+    # AUTH_CREDS = service_account.Credentials.from_service_account_file(CREDS_FILE)
 
-    scoped_credentials = AUTH_CREDS.with_scopes(
-        ['https://www.googleapis.com/auth/cloud-platform'])
+    # scoped_credentials = AUTH_CREDS.with_scopes(
+    #     ['https://www.googleapis.com/auth/cloud-platform'])
     # credentials, project_id = google.auth.default()
 
     # Setting Credentials using SERVICE ACCOUNT CREDENTIALS if use ADC just remove the 'credentials param'
-    storage_client = storage.Client(project=project_id, credentials=AUTH_CREDS)
-    # client = storage.Client()
+    # storage_client = storage.Client(credentials=AUTH_CREDS)
+    storage_client = storage.Client()
 
     buckt = storage_client.bucket(bucket)
 
@@ -149,7 +148,6 @@ with DAG(
         task_id="local_to_gcs_task",
         python_callable=upload_to_gcs,
         op_kwargs={
-            "project_id": PROJECT_ID,
             "bucket": BUCKET_NAME,
             "object_name": f"raw/{PARQUET_FILE}",
             "local_file": f"{LOCAL_HOME_PATH}/{PARQUET_FILE}",
